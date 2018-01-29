@@ -103,8 +103,7 @@ class EmbeddingLSTM(object):
                 assert 'units' in layer and layer['units'] is not None and type(layer['units']) is int
                 assert 'activation' in layer and layer['activation'] is not None and type(layer['activation']) is str
                 if 'dropout' in layer:
-                    assert type(layer['dropout']) is float
-                    assert layer['dropout'] is None or (0 < layer['dropout'] < 1)
+                    assert layer['dropout'] is None or (type(layer['dropout']) is float and (0 < layer['dropout'] < 1))
         self.dense = dense
 
     def __call__(self, inputs, **kwargs):

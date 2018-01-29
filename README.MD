@@ -2,9 +2,9 @@
 
 本项目维护一些自行实现或复现的模型
 
-## keras
+## Keras 模型
 
-基于 keras 实现的模型, 实现为与 keras.layer 同构, 维护在目录 keras 下.
+基于 Keras 实现的模型, 实现为与 keras.layer 同构, 调用方式与 Keras 的 layer 函数式调用无疑. 维护在目录 k/layers 下.
 
 ### EmbeddingLSTM
 
