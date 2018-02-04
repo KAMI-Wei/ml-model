@@ -101,7 +101,7 @@ if __name__ == '__main__':
         model_checkpoint_best_path, save_best_only=True, monitor='val_acc',  mode='max', verbose=1)
 
     model.fit(x={'x': x_train}, y={'y': y_train}, batch_size=32, epochs=10,
-              verbose=1, callbacks=[checkpoint_best, checkpoint_best],
+              verbose=1, callbacks=[checkpoint_better, checkpoint_best],
               validation_data=[{'x': x_test}, {'y': y_test}])
 
 
