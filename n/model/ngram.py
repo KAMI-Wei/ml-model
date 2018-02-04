@@ -21,7 +21,7 @@ class NgramCounter(object):
 
     必要成员属性和方法
     - order: 属性, int, 模型阶数
-    - ngrams: 属性, dict<int, ConditionalFreqDist>, 各界模型的条件概率分布的集合
+    - ngrams: 属性, dict<int, ConditionalFreqDist>, 各阶模型的条件概率分布的集合
     - vocabulary: 属性, set<tuple<str>>, ngram词汇表
     - to_gram: 方法, (list<str>)-> yield tuple<str>, 通过输入文本生成ngram
     - check_against_vocab: 方法, (str)-> str, 根据词汇表对单词做映射
@@ -55,8 +55,6 @@ class NgramCounter(object):
         self._pad_right = pad_right
         self._left_pad_symbol = left_pad_symbol
         self._right_pad_symbol = right_pad_symbol
-        self._lpad = (left_pad_symbol,) * (order - 1) if pad_left else ()
-        self._rpad = (right_pad_symbol,) * (order - 1) if pad_right else ()
 
         cfd = ConditionalFreqDist()
         self._vocabulary = set()
