@@ -1,5 +1,4 @@
-from keras.models import Model
-from keras.layers import Input,Flatten
+from keras.layers import Flatten
 from keras.layers.convolutional import MaxPooling2D, AveragePooling2D
 from keras import backend as K
 from typing import Callable
@@ -7,7 +6,6 @@ from typing import Callable
 from k.layers.dense.Dense import MultiDense
 
 from k.blocks.blocks import block_bn_relu, block_conv_bn_relu
-from k.layers.residual.Residual import basic
 from k.layers.residual.Residual import MultiResidual
 
 from k import ROW_AXIS, COL_AXIS
@@ -54,40 +52,57 @@ class ResNet(object):
 
         return outputs
 
-    @staticmethod
-    def _residual_block(block_function, filters, repetitions, is_first_layer=False):
-        """Builds a residual block with repeating bottleneck blocks.
-        """
-        def f(inputs):
-            for i in range(repetitions):
-                init_strides = (1, 1)
-                if i == 0 and not is_first_layer:
-                    init_strides = (2, 2)
-                inputs = block_function(filters=filters,
-                                        init_strides=init_strides,
-                                        is_first_block_of_first_layer=(is_first_layer and i == 0)
-                                        )(inputs)
-            return inputs
-
-        return f
-
 
 if __name__ == '__main__':
+    from keras.models import Model
+    from keras.models import Input
+    from keras.layers import Lambda
 
-    if K.image_dim_ordering() == 'tf':
-        x = Input(name='x', shape=(100, 100, 3))
-    else:
-        x = Input(name='x', shape=(3, 100, 100))
+    from k.layers.residual.Residual import basic
 
-    y = ResNet(name='resnet',
-               repetitions=[3, 4, 23, 3],
-               block_fn=basic,
-               dense=[
-                   {'units': 10, 'activation': 'softmax', 'dropout': None, 'kernel_initializer': 'he_normal', 'name': 'd'}
-               ]
-               )(x)
+    from keras.datasets import mnist
+    from keras.utils import np_utils
 
+    from keras.callbacks import EarlyStopping
+    from keras.callbacks import ModelCheckpoint
+
+    # 输入数据
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+    x_train = x_train.reshape([-1, 1, 28, 28])
+    y_train = np_utils.to_categorical(y_train)
+
+    x_test = x_test.reshape([-1, 1, 28, 28])
+    y_test = np_utils.to_categorical(y_test)
+
+    # 构建模型
+    x = Input(name='x', shape=(1, 28, 28))
+    net = ResNet(name='resnet',
+                 repetitions=[3, 4],
+                 block_fn=basic,
+                 dense=[
+                     {'units': 10, 'activation': 'softmax', 'dropout': None, 'name': 'd'}
+                 ]
+                 )(x)
+    y = Lambda(name='y', function=lambda i: i)(net)
     model = Model(inputs=[x], outputs=[y])
-    model.summary()
+    model.compile(loss='categorical_crossentropy', optimizer='adam',  metrics=['accuracy', 'mse'])
+
+    # 模型训练和保存
+    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.0001, mode='max', patience=3, verbose=1)
+
+    model_checkpoint_better_path = 'mnist.checkpoint.epoch-{epoch:02d}.val_loss-{val_loss:.6f}.val_acc-{val_acc:.6f}'
+    model_checkpoint_best_path = 'mnist.checkpoint.best'
+
+    checkpoint_better = ModelCheckpoint(
+        model_checkpoint_better_path, save_best_only=True, monitor='val_acc',  mode='max', verbose=1)
+
+    checkpoint_best = ModelCheckpoint(
+        model_checkpoint_best_path, save_best_only=True, monitor='val_acc',  mode='max', verbose=1)
+
+    model.fit(x={'x': x_train}, y={'y': y_train}, batch_size=32, epochs=10,
+              verbose=1, callbacks=[checkpoint_best, checkpoint_best],
+              validation_data=[{'x': x_test}, {'y': y_test}])
+
 
 

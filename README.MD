@@ -10,6 +10,10 @@
 
 经典 Embedding, LSTM, Dense(s) 三层模型
 
+### ResNet
+
+经典 ResNet 复现
+
 
 ## NLTK
 
