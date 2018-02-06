@@ -1,13 +1,22 @@
 """
 Bayes相关模型
 """
-from ngram import NgramCounter
+import pickle
+from collections import defaultdict
+from ngram import NgramCounter, NgramModel
 
 
 class BayesCorrector(object):
 
-    def __init__(self, counter):
-        self._counter = counter
+    def __init__(self, ngram_model: NgramModel, tokenizer=None):
+        self._ngram_model = ngram_model
+
+        self._lookup_table = defaultdict(lambda: 0)
+
+        self._dictionary = set()
+
+        for word in self._ngram_model.ngram_counter.counter[1].vocabulary:
+            self._dictionary.add(word[0])
 
     # 返回所有编辑距离为1的单词集合
     def edits1(self, word):
@@ -17,6 +26,7 @@ class BayesCorrector(object):
                    [word[0:i] + word[i + 1] + word[i] + word[i + 2:] for i in range(n - 1)] +  # transposition
                    [word[0:i] + c + word[i + 1:] for i in range(n) for c in alphabet] +  # alteration
                    [word[0:i] + c + word[i:] for i in range(n + 1) for c in alphabet])  # insertion
+    #
 
     def known_edits2(self, word):
         """
@@ -32,30 +42,59 @@ class BayesCorrector(object):
         :param words:
         :return:
         """
-        return set(w for w in words if w in self._counter)
+        return set(w for w in words if w in self._dictionary)
 
-    def correct(self, word):
-        """
-        如果known(set)非空, candidate 就会选取这个集合, 而不继续计算后面的
-        :param word:
-        :return:
-        """
-        candidates = self.known([word]) or self.known(self.edits1(word)) or self.known_edits2(word) or [word]
-        print(candidates)
-        return max(candidates, key=lambda w: self._counter[w])
+    def correct(self, text):
+        text_corrected = []
+
+        for ngram in self._ngram_model.ngram_counter.to_ngrams(text):
+
+            word = ngram[-1]
+            context = ngram[:-1]
+
+            # TODO 句法分析
+            if word in self._dictionary:
+                text_corrected.append(word)
+                continue
+
+            candidates = self.known(self.edits1(word))
+            if len(candidates) == 0:
+                text_corrected.append(word)
+                continue
+
+            if ngram in self._lookup_table:
+                text_corrected.append(self._lookup_table[ngram])
+                continue
+
+            best_candidate = None
+            best_prob = 0
+            for candidate in candidates:
+                prob = self._ngram_model.score(candidate, context)
+                if prob > best_prob:
+                    best_candidate = candidate
+                    best_prob = prob
+            self._lookup_table[ngram] = best_candidate
+            text_corrected.append(best_candidate)
+
+        return text_corrected
+
+    def save(self):
+        return pickle.dumps(obj=self._ngram_model, protocol=True, fix_imports=True)
+
+
 
 
 if __name__ == '__main__':
-    import nltk.book as book
+    from nltk.text import Text
+    from nltk.corpus import gutenberg
+    text1 = Text(gutenberg.words('melville-moby_dick.txt'))
     import json
 
-    ngramCounter = NgramCounter(order=2, train=book.text1)
+    ngramCounter = NgramCounter(order=2, train=text1)
+    ngramModel = NgramModel(ngram_counter=ngramCounter)
 
-    print(ngramCounter.vocabulary)
+    corrector = BayesCorrector(ngram_model=ngramModel)
+    print(corrector.correct(['I', 'don', 'think', 'you', 'rre', 'good']))
+    print(corrector.save())
 
-    counter = book.text1.vocab()
-
-    corrector = BayesCorrector(counter)
-
-    print(json.dumps(corrector.correct("helllo"), indent=2))
 

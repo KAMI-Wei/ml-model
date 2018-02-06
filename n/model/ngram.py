@@ -41,6 +41,7 @@ class NgramCounter(object):
         :param recursive: 是否生成低阶模型
         """
         self._ngrams = dict()
+        self._counter = dict()
 
         # 模型阶数必须大于0
         assert (order > 0), order
@@ -72,6 +73,7 @@ class NgramCounter(object):
                 cfd[context][token] += 1
 
         self._ngrams[self._order] = cfd
+        self._counter[self._order] = self
 
         # NB, 关键代码: 递归生成低阶NgramCounter
         # 如果递归, 那就生成低阶概率分布, 注意还要把order-2至1阶的概率分布取回来
@@ -83,6 +85,7 @@ class NgramCounter(object):
             cursor = self._backoff
             while cursor is not None:
                 self._ngrams[cursor.order] = cursor.ngrams[cursor.order]
+                self._counter[cursor.order] = cursor
                 cursor = cursor.backoff
         else:
             self._backoff = None
@@ -98,6 +101,10 @@ class NgramCounter(object):
     @property
     def ngrams(self) -> dict:
         return self._ngrams
+
+    @property
+    def counter(self) -> dict:
+        return self._counter
 
     @property
     def backoff(self) -> type('NgramCounter'):
@@ -167,6 +174,7 @@ class NgramModel(BaseNgramModel):
         return self._beta(tokens) / self._backoff._beta(tokens[1:])
 
     def _beta(self, tokens):
+        # TODO 有些 estimator 没有 discount, 这个时候得改用 prob
         return self[tokens].discount() if tokens in self else 1
 
     def choose_random_word(self, context):
@@ -212,6 +220,8 @@ class NgramModel(BaseNgramModel):
     def __repr__(self):
         return '<NgramModel with %d %d-grams>' % (len(self._ngrams), self._n)
 
+
+__all__ = ['NgramCounter', 'NgramModel', ]
 
 if __name__ == '__main__':
     from nltk.book import text6
