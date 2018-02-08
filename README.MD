@@ -26,3 +26,7 @@
 - n/model/model.py: 目前nltk的'model'分支上的'BaseNgramModel'基类
 - n/model/ngram.py: 继承'BaseNgramModel'实现的Katz backoff平滑Ngrams模型
 - n/model/legacy/ngram.py: nltk 2.x版本的Katz backoff平滑Ngrams模型
+
+### NgramCorrector
+
+基于 NgramModel 实现的拼写纠正器. 对于出错的单词, 从更改大小写|移除重复字母|元音替换|编辑距离小于等于二的单词中选一个ngram概率最大的单词.
